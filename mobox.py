@@ -352,8 +352,8 @@ def BotSession():
                         port=PORT,
                         url_path=newBotID,
                         webhook_url="https://moboxbot.herokuapp.com/" + newBotID)
-    updater.idle() 
     threading.Timer(currentTickRate, setCallback).start()
+    updater.idle() 
 
 def DictCompare(d1, d2):
     d1_values = set(d1.values())

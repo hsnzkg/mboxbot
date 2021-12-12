@@ -32,4 +32,5 @@ tzlocal==4.1
 urllib3==1.26.7
 webencodings==0.5.1
 wsproto==1.0.0
+numpy == 1.21.4
 

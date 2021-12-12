@@ -83,7 +83,7 @@ def PaintDatabaseImages():
         finalPaintedImage.paste(coreImage,(0,0),coreImage)
         finalPaintedImage.paste(hashrateResizedImage,(10,10),hashrateResizedImage)
 
-        smallFont = ImageFont.truetype("{path}impact.ttf".format(path = fontDatabase),60)
+        smallFont = ImageFont.truetype("{path}impact.ttf".format(path = fontDatabase),20)
         draw = ImageDraw.Draw(finalPaintedImage)
 
         #marka
@@ -96,7 +96,7 @@ def PaintDatabaseImages():
 def PaintImageTexts(hashrate,price,momoID,momoPhotoID):
 
     bigFont = ImageFont.truetype("{path}impact.ttf".format(path = fontDatabase),60)
-    mediumFont = ImageFont.truetype("{path}impact.ttf".format(path = fontDatabase),60)
+    mediumFont = ImageFont.truetype("{path}impact.ttf".format(path = fontDatabase),30)
 
 
     paintedImage = Image.open('{path}{image}.png'.format(path = paintedDatabasePath, image = str(momoID) + "-" + str(momoPhotoID))).convert("RGBA")

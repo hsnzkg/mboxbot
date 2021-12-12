@@ -14,6 +14,7 @@ databasePath = "databaseImages/"
 paintedDatabasePath = "paintedDatabaseImages/"
 externalDatabasePath =  "externalDatabaseImages/"
 tempDatabasePath = "tempDatabaseImages/"
+fontDatabase = "fontDatabase/"
 
 class colorCategory (enum.Enum):
     COMMON = (128, 128, 128,255)
@@ -82,7 +83,7 @@ def PaintDatabaseImages():
         finalPaintedImage.paste(coreImage,(0,0),coreImage)
         finalPaintedImage.paste(hashrateResizedImage,(10,10),hashrateResizedImage)
 
-        smallFont = ImageFont.truetype("impact.ttf",15)
+        smallFont = ImageFont.truetype("{path}impact.ttf".format(fontDatabase),15)
         draw = ImageDraw.Draw(finalPaintedImage)
 
         #marka
@@ -94,8 +95,8 @@ def PaintDatabaseImages():
 
 def PaintImageTexts(hashrate,price,momoID,momoPhotoID):
 
-    bigFont = ImageFont.truetype("impact.ttf",50)
-    mediumFont = ImageFont.truetype("impact.ttf",35)
+    bigFont = ImageFont.truetype("{path}impact.ttf".format(fontDatabase),15)
+    mediumFont = ImageFont.truetype("{path}impact.ttf".format(fontDatabase),15)
 
 
     paintedImage = Image.open('{path}{image}.png'.format(path = paintedDatabasePath, image = str(momoID) + "-" + str(momoPhotoID))).convert("RGBA")

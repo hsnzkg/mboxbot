@@ -352,6 +352,7 @@ def BotSession():
                         port=PORT,
                         url_path=newBotID,
                         webhook_url="https://moboxbot.herokuapp.com/" + newBotID)
+    sleep(currentStartTickRate)
     threading.Timer(currentTickRate, setCallback).start()
     updater.idle() 
 

@@ -1,1 +1,1 @@
-web: python mobox.py
+web: python3 mobox.py

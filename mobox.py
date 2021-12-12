@@ -332,12 +332,9 @@ def clearBotCommand(update,context):
     context.bot.send_message(chat_id=update.effective_chat.id, text=CLEARPROCESSTEXT,parse_mode = PARSEMODE_MARKDOWN)
 
 def BotSession():
-    sleep(currentStartTickRate)
-    threading.Timer(currentTickRate, setCallback).start()
     global updater
     updater = Updater(newBotID,use_context=True)
-
-
+   
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CommandHandler('start',startCommand))
     dispatcher.add_handler(CommandHandler('help',helpCommand))
@@ -351,11 +348,12 @@ def BotSession():
     #updater.start_polling()
 
     updater.start_webhook(listen="0.0.0.0",
-                      port=int(80),
+                      port=int(443),
                       url_path=newBotID,
                       webhook_url = 'https://moboxbot.herokuapp.com/' + newBotID)
+    
     updater.idle() 
-
+    threading.Timer(currentTickRate, setCallback).start()
 
 def DictCompare(d1, d2):
     d1_values = set(d1.values())

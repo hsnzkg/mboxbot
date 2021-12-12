@@ -351,9 +351,9 @@ def BotSession():
     #updater.start_polling()
 
     updater.start_webhook(listen="0.0.0.0",
-                          port=int(80),
-                          url_path=newBotID)
-    updater.bot.setWebhook('https://moboxbot.herokuapp.com/' + newBotID)
+                      port=int(80),
+                      url_path=newBotID,
+                      webhook_url = 'https://moboxbot.herokuapp.com/' + newBotID)
     updater.idle() 
 
 

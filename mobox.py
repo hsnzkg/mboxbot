@@ -348,8 +348,14 @@ def BotSession():
     dispatcher.add_handler(CommandHandler('clearbot',clearBotCommand))
 
 
-    updater.start_polling()
-    updater.idle() 
+    #updater.start_polling()
+    #updater.idle() 
+    PORT = int(os.environ.get('PORT', 5000))
+    updater.start_webhook(listen="0.0.0.0",
+                          port=int(PORT),
+                          url_path=newBotID)
+    updater.bot.setWebhook('https://moboxbot.herokuapp.com/' + newBotID)
+
 
 def DictCompare(d1, d2):
     d1_values = set(d1.values())

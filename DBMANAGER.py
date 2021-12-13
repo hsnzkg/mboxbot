@@ -9,6 +9,7 @@ import numpy as np
 from requests.api import patch
 from datetime import *
 
+
 coreDataPath = "coreDatabase/"
 databasePath = "databaseImages/"
 paintedDatabasePath = "paintedDatabaseImages/"
@@ -44,9 +45,8 @@ def GetMomoPhotoIDValue(requiredKey):
     
     return  data_set[str(requiredKey)]
 
-
 def DownloadDatabaseImages():
-    from mobox import GetMomoPhotoLink
+    from MOBOX import GetMomoPhotoLink
     with open("{path}data.txt".format(path = coreDataPath)) as f:
         data = f.readlines()
         dataCleared = [element.replace('VM44219:1','') for element in data]
@@ -68,7 +68,7 @@ def DownloadDatabaseImages():
                     handle.write(block)
 
 def PaintDatabaseImages():
-    from mobox import GetMomoRarity
+    from MOBOX import GetMomoRarity
     for f in os.listdir(databasePath):
         tempmomoID = f.split("-")[0]
         tempPhotoID = f.split("-")[1].split(".")[0]
@@ -90,9 +90,6 @@ def PaintDatabaseImages():
         draw.text(((512/2-190),(512/2 +240)),"@MOMOCATCHERBOT",colorCategory.TEXT.value, stroke_width=2,stroke_fill=colorCategory.TEXTSTROKE.value,font =smallFont,anchor="mm")
         finalPaintedImage.save("{path}{mergedImage}.png".format(path =paintedDatabasePath, mergedImage = tempmomoID + "-" + tempPhotoID),"PNG")
 
-
-
-
 def PaintImageTexts(hashrate,price,momoID,momoPhotoID):
 
     bigFont = ImageFont.truetype("{path}impact.ttf".format(path = fontDatabase),60)
@@ -110,7 +107,6 @@ def PaintImageTexts(hashrate,price,momoID,momoPhotoID):
     draw.text(((512/2 -175),(512/2 -225 )),"{hashrate}".format(hashrate = hashrate),colorCategory.TEXT.value, stroke_width=2,stroke_fill=colorCategory.TEXTSTROKE.value,font =mediumFont,anchor="mm")
     
     paintedImage.save("{path}{tempImage}.png".format(path = tempDatabasePath, tempImage = str(momoID) + "-" + str(momoPhotoID)),"PNG")
-
 
 def StopUserSets(userID):
     with open('{path}users.json'.format(path = coreDataPath), 'r', encoding='utf-8') as f:
@@ -174,14 +170,12 @@ def SaveUser(userID,userName):
         with open('{path}users.json'.format(path = coreDataPath), 'w', encoding='utf-8') as f:
             json.dump(data, f,default=str)
 
-
 def ClearAllDatabase():
     with open('{path}users.json'.format(path = coreDataPath), 'r', encoding='utf-8') as f:
         data = json.load(f)
     data["users"].clear()
     with open('{path}users.json'.format(path = coreDataPath), 'w', encoding='utf-8') as f:
         json.dump(data, f)
-
 
 def ClearUserSets(userID):
     with open('{path}users.json'.format(path = coreDataPath), 'r', encoding='utf-8') as f:
@@ -192,9 +186,8 @@ def ClearUserSets(userID):
     with open('{path}users.json'.format(path = coreDataPath), 'w', encoding='utf-8') as f:
         json.dump(data, f)
 
-
 def CheckUserSets(userID,set):
-    from mobox import DictCompare
+    from MOBOX import DictCompare
 
     with open('{path}users.json'.format(path = coreDataPath), 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -207,7 +200,6 @@ def CheckUserSets(userID,set):
                 
     return isValid
 
-
 def GetOnlineUsers():
     tempOnlineUsers = []
     with open('{path}users.json'.format(path = coreDataPath), 'r', encoding='utf-8') as f:
@@ -216,7 +208,6 @@ def GetOnlineUsers():
             if(i["status"] == "on"):
                 tempOnlineUsers.append(i)
     return tempOnlineUsers
-
 
 def SaveUserSet(userID,set):
     with open('{path}users.json'.format(path = coreDataPath), 'r', encoding='utf-8') as f:
@@ -235,3 +226,18 @@ def GetUserSets(userID):
             if(i["userID"] == userID):
                 return i["sets"]
 
+def DownloadLastSales():
+    from MOBOX import transactionAPI
+    from MOBOX import ago
+    from MOBOX import headers
+
+
+    requestURL = transactionAPI.format(ago = ago.ONE.value)
+    response = requests.get(requestURL,headers=headers)
+    json_data = json.loads(response.content)
+    return json_data
+
+
+
+
+print(DownloadLastSales())

@@ -19,7 +19,7 @@ from telegram import chat
 from telegram import parsemode
 from telegram import update
 from telegram.constants import PARSEMODE_HTML, PARSEMODE_MARKDOWN, PARSEMODE_MARKDOWN_V2
-import dataParser
+
 
 from telegram import ParseMode
 from telegram.ext.updater import Updater
@@ -34,7 +34,6 @@ from telegram.ext import Defaults
 
 
 #region ENUMS
-
 class category (enum.Enum):
     ALL = "0"
     WIND = "1"
@@ -62,9 +61,14 @@ class vType (enum.Enum):
     RARE = "4"
     EPIC = "5"
     LEGENDARY = "6"
+
+class ago (enum.Enum):
+    ONE = 1
+    SEVEN = 7
+    ALL = "ALL"
 #endregion ENUMS
 
-
+#region MOMOMARKET
 currentvType = vType.UNIQUE
 currentCategory = category.ALL
 currentSort = sort.LTACC
@@ -72,20 +76,31 @@ currentPType = pType.DEFAULT
 currentChain = 'BNB'
 currentPage = 1
 currentLimit = 15
-lastResponse = []
-currentTickRate = 5
-currentStartTickRate = 5
-channelID = "-1001746717168"
-botID ="5074524076:AAG9g8QsG8xb-RxSOJCAFhkb9GIRm60M1ZU"
-newBotID = "5074248859:AAHIOiI4-CnpoCX4Qb0XTqD6qbkY8x-go_Q"
-MOMOMARKETNORMALURL = 'https://www.mobox.io/home/#/iframe/momo?path=market&tab=0'
+momoMarketLR = []
+momoMarketCTR = 5
+momoMarketCSTR = 5
+#endregion MOMOMARKET
 
+#region TRANSACTION
+#endregion TRANSACTION
+
+
+
+
+#region TELEGRAM
+channelID = "-1001746717168"
+botID = "5074248859:AAHIOiI4-CnpoCX4Qb0XTqD6qbkY8x-go_Q"
+#endregion TELEGRAM
+
+#region URLS
+momoMarketURL = 'https://www.mobox.io/home/#/iframe/momo?path=market&tab=0'
+momoMarketAPI = 'https://nftapi.mobox.io/auction/search/{chain}?page={page}&limit={limit}&category={category}&vType={vType}&sort={sort}&pType={pType}'
+momoMarketPAPI = 'https://www.mobox.io/momo/img/{key}.{value}.png'
+transactionAPI = 'https://nftapi.mobox.io/auction/transactions?&ago={ago}'
+#endregion URLS
 
 #region TEXT MESSAGES
-         
-MOMOAUCTIONURL = 'https://nftapi.mobox.io/auction/search/{chain}?page={page}&limit={limit}&category={category}&vType={vType}&sort={sort}&pType={pType}'
-MOMOPHOTOURL = 'https://www.mobox.io/momo/img/{key}.{value}.png'
-
+        
 SETPOSITIVETEXT = "⏳ I WILL SEND YOU A MESSAGE WHEN ANY *{rarity}* price  *{operator}* *BUSD{price}*\n"
 WELCOMETEXT = "👋WELCOME👋 *{username}*\nOUR ADMINS WILL TAKE YOUR *REGISTER* PROCESS AND YOU WILL BE NOTIFIED *SOON*...\n*YOUR ID*: *{id}*"
 MOMOREPLYTEXT = "🔥*NEW MOMO LISTED*🔥\nMOMO PRICE: *{price} BUSD*\nMOMO HASHRATE: *{hashrate}*\nMOMO LEVEL: *{level}*\nMOMO RARITY: *{rarity}*\n"
@@ -109,6 +124,9 @@ UNKOWNTEXT = "⚠️You typed wrong *COMMAND* for help please use -> */help*"
 #endregion TEXTMESSAGES
 
 headers = {
+    "accept":"application/json, text/plain, */*",
+    "accept-encoding":"gzip, deflate, br",
+    "connection":"keep-alive",
     'Content-Security-Policy': 'upgrade-insecure-requests',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36',
     'authority': 'bsc-dataseed2.binance.org',
@@ -119,21 +137,19 @@ headers = {
     }
 
 
-
-
-
 def GetMomoPhotoID(MOMOID):
-    return dataParser.GetMomoPhotoIDValue(MOMOID)
+    from DBMANAGER import GetMomoPhotoIDValue
+    return GetMomoPhotoIDValue(MOMOID)
 
 def GetMomoPhotoLink(ID,PHOTOID):
-    return MOMOPHOTOURL.format(key = str(ID), value = str(PHOTOID))
+    return momoMarketPAPI.format(key = str(ID), value = str(PHOTOID))
 
 def GetMomoName(momoJson):
     #TODO
     return
 
 def GetLastMomos(chain,page,limit,category,vType,sort):
-    requestURL = MOMOAUCTIONURL.format(chain = chain, page = page , limit = limit,category = category,vType = vType,sort = sort, pType = currentPType)
+    requestURL = momoMarketAPI.format(chain = chain, page = page , limit = limit,category = category,vType = vType,sort = sort, pType = currentPType)
     response = requests.get(requestURL,headers=headers)
     json_data = json.loads(response.content)
     for momojson in json_data["list"]:
@@ -205,34 +221,40 @@ def helpCommand(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text=HELPTEXT,parse_mode = PARSEMODE_MARKDOWN)
 
 def stopBotCommand(update,context):
+    from DBMANAGER import StopUserSets
     response = STOPPROCESSTEXT
     context.bot.send_message(chat_id=update.effective_chat.id, text=response,parse_mode = PARSEMODE_MARKDOWN)
-    dataParser.StopUserSets(update.effective_chat.id)
+    StopUserSets(update.effective_chat.id)
 
 def startBotCommand(update,context):
+    from DBMANAGER import StartUserSets
     response = STARTPROCESSTEXT
     context.bot.send_message(chat_id=update.effective_chat.id, text=response,parse_mode = PARSEMODE_MARKDOWN)
-    dataParser.StartUserSets(update.effective_chat.id)
+    StartUserSets(update.effective_chat.id)
 
 def registerCommand(update,context):
+    from DBMANAGER import CheckUserDatabase,SaveUser
+    
     if(len(context.args) > 0 and len(context.args ) < 2):
-        if(dataParser.CheckUserDatabase(update.effective_chat.id)):
+        if(CheckUserDatabase(update.effective_chat.id)):
             response = REGISTERSECONDNEGATIVETEXT
         else:
-            dataParser.SaveUser(update.effective_chat.id,str(context.args[0]))
+            SaveUser(update.effective_chat.id,str(context.args[0]))
             response = WELCOMETEXT.format(username = str(context.args[0]),id= str(update.effective_chat.id))       
     else:
         response = REGISTERNEGATIVETEXT
     context.bot.send_message(chat_id=update.effective_chat.id, text=response,parse_mode = PARSEMODE_MARKDOWN)
 
 def setCommand(update, context):
+    from DBMANAGER import CheckUserDatabase,CheckUserSubscription,CheckUserSets,SaveUserSet
+
     if  len(context.args) > 2 and len(context.args) < 4:
         boolOne = has_value(vType,context.args[0].upper())
         boolTwo = (str(context.args[1])) == '<' or (str(context.args[1])) == '>'
         boolThree = is_float(context.args[2])
 
         if  is_allTrue((boolOne,boolTwo,boolThree)):
-            if dataParser.CheckUserDatabase(update.effective_chat.id) and dataParser.CheckUserSubscription(update.effective_chat.id):
+            if CheckUserDatabase(update.effective_chat.id) and CheckUserSubscription(update.effective_chat.id):
                 tempUserID = update.effective_chat.id
                 tempRare = context.args[0].upper()
                 tempOperator = context.args[1]
@@ -243,13 +265,13 @@ def setCommand(update, context):
                     "OPERATOR":tempOperator,
                     "PRICE":tempPrice
                 }
-                if(dataParser.CheckUserSets(tempUserID,tempSet)):
+                if(CheckUserSets(tempUserID,tempSet)):
                     response = SETFOURTHNEGATIVETEXT.format(rarity = tempRare,operator = tempOperator , price = tempPrice)
                 else:
-                    dataParser.SaveUserSet(tempUserID,tempSet)
+                    SaveUserSet(tempUserID,tempSet)
                     response = SETPOSITIVETEXT.format(rarity = tempRare,operator = tempOperator , price = tempPrice)
             else:
-                if(dataParser.CheckUserDatabase(update.effective_chat.id) == False):
+                if(CheckUserDatabase(update.effective_chat.id) == False):
                     response = SETNEGATIVETEXT
                 else:
                     response = SETSECONDNEGATIVETEXT
@@ -277,32 +299,36 @@ def is_allTrue(tuple):
     return True
 
 def setCallback(): 
-    global lastResponse 
+    from DBMANAGER import GetOnlineUsers
+    global momoMarketLR 
     sendables = []
 
-    if(len(dataParser.GetOnlineUsers()) > 0):   
+    if(len(GetOnlineUsers()) > 0):   
         response = GetLastMomos(currentChain,currentPage,currentLimit,currentCategory,currentvType,currentSort)
         if(len(response) > 0):
 
-            if(len(lastResponse) == 0):
-                lastResponse = response
-                sendables = lastResponse
+            if(len(momoMarketLR) == 0):
+                momoMarketLR = response
+                sendables = momoMarketLR
             else:
                 for newJSON in (response):
                     isAddeable = True
-                    for oldJSON in (lastResponse):
+                    for oldJSON in (momoMarketLR):
                         if(DictCompare(newJSON,oldJSON) == True):
                             isAddeable = False
                     if(isAddeable == True):
                         sendables.append(newJSON)
-                lastResponse = response
+                momoMarketLR = response
 
 
             
            
 
 
-    if(len(sendables) > 0):        
+    if(len(sendables) > 0):    
+        from DBMANAGER import GetOnlineUsers,PaintImageTexts,tempDatabasePath,GetUserSets
+
+
         for x in sendables:
             send = False
             tempSpecs = GetMomoAllSpecs(x)
@@ -310,9 +336,9 @@ def setCallback():
             tempCurrentPrice = tempSpecs["price"]
 
 
-            for user in dataParser.GetOnlineUsers():
-                if(len(dataParser.GetUserSets(user["userID"]))> 0):
-                    for i in dataParser.GetUserSets(user["userID"]):
+            for user in GetOnlineUsers():
+                if(len(GetUserSets(user["userID"]))> 0):
+                    for i in GetUserSets(user["userID"]):
                         if i["OPERATOR"] == '<' and tempCurrentRarity == i["RARITY"]:
                             if float(i["PRICE"]) >= float(tempCurrentPrice):
                                 send = True
@@ -320,20 +346,20 @@ def setCallback():
                             if float(i["PRICE"]) <= float(tempCurrentPrice)  and tempCurrentRarity == i["RARITY"]:
                                 send = True
                     if(send):
-                        dataParser.PaintImageTexts(tempSpecs["hashrate"],tempSpecs["price"],tempSpecs["momoID"],tempSpecs["photoID"])
-                        updater.bot.sendPhoto(chat_id=user["userID"], photo = open('{path}{momoID}-{photoID}.png'.format(path = dataParser.tempDatabasePath,momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]), 'rb'),caption = "{}".format(GetAnnounceText(tempSpecs)),parse_mode = PARSEMODE_MARKDOWN)
-                        os.remove("{path}{momoID}-{photoID}.png".format(path = dataParser.tempDatabasePath, momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]))
+                        PaintImageTexts(tempSpecs["hashrate"],tempSpecs["price"],tempSpecs["momoID"],tempSpecs["photoID"])
+                        updater.bot.sendPhoto(chat_id=user["userID"], photo = open('{path}{momoID}-{photoID}.png'.format(path = tempDatabasePath,momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]), 'rb'),caption = "{}".format(GetAnnounceText(tempSpecs)),parse_mode = PARSEMODE_MARKDOWN)
+                        os.remove("{path}{momoID}-{photoID}.png".format(path = tempDatabasePath, momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]))
 
-    threading.Timer(currentTickRate, setCallback).start()
-
+    threading.Timer(momoMarketCTR, setCallback).start()
 
 def clearBotCommand(update,context):
-    dataParser.ClearUserSets(update.effective_chat.id)
+    from DBMANAGER import ClearUserSets
+    ClearUserSets(update.effective_chat.id)
     context.bot.send_message(chat_id=update.effective_chat.id, text=CLEARPROCESSTEXT,parse_mode = PARSEMODE_MARKDOWN)
 
 def BotSession():
     global updater
-    updater = Updater(newBotID,use_context=True)
+    updater = Updater(botID,use_context=True)
    
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CommandHandler('start',startCommand))
@@ -350,10 +376,10 @@ def BotSession():
     PORT = int(os.environ.get('PORT', '8443'))
     updater.start_webhook(listen="0.0.0.0",
                         port=PORT,
-                        url_path=newBotID,
-                        webhook_url="https://moboxbot.herokuapp.com/" + newBotID)
-    sleep(currentStartTickRate)
-    threading.Timer(currentTickRate, setCallback).start()
+                        url_path=botID,
+                        webhook_url="https://moboxbot.herokuapp.com/" + botID)
+    sleep(momoMarketCSTR)
+    threading.Timer(momoMarketCTR, setCallback).start()
     updater.idle() 
 
 def DictCompare(d1, d2):
@@ -371,16 +397,20 @@ def DictCompare(d1, d2):
         return False
 
 def ChannelSession():
-    updater = Updater(newBotID,use_context=True)
+    from DBMANAGER import PaintImageTexts,tempDatabasePath
+
+    updater = Updater(botID,use_context=True)
     lastMomosJSON = GetLastMomos(currentChain,currentPage,currentLimit,currentCategory,currentvType,currentSort)
     lastMomoJSONDatas = GetMomoAllSpecs(lastMomosJSON[0])
-    dataParser.PaintImageTexts(lastMomoJSONDatas["hashrate"],lastMomoJSONDatas["price"],lastMomoJSONDatas["momoID"],lastMomoJSONDatas["photoID"])
-    updater.bot.sendPhoto(chat_id='@momotracker',photo =open('{path}{momoID}-{photoID}.png'.format(path = dataParser.tempDatabasePath,momoID = lastMomoJSONDatas["momoID"],photoID = lastMomoJSONDatas["photoID"]), 'rb'),caption = "{}".format(GetAnnounceText(lastMomoJSONDatas)),parse_mode = PARSEMODE_MARKDOWN)
-    os.remove("{path}{momoID}-{photoID}.png".format(path = dataParser.tempDatabasePath, momoID = lastMomoJSONDatas["momoID"],photoID = lastMomoJSONDatas["photoID"]))
+    PaintImageTexts(lastMomoJSONDatas["hashrate"],lastMomoJSONDatas["price"],lastMomoJSONDatas["momoID"],lastMomoJSONDatas["photoID"])
+    updater.bot.sendPhoto(chat_id='@momotracker',photo =open('{path}{momoID}-{photoID}.png'.format(path = tempDatabasePath,momoID = lastMomoJSONDatas["momoID"],photoID = lastMomoJSONDatas["photoID"]), 'rb'),caption = "{}".format(GetAnnounceText(lastMomoJSONDatas)),parse_mode = PARSEMODE_MARKDOWN)
+    os.remove("{path}{momoID}-{photoID}.png".format(path = tempDatabasePath, momoID = lastMomoJSONDatas["momoID"],photoID = lastMomoJSONDatas["photoID"]))
 
-def DatabaseSession():      
-    dataParser.DownloadDatabaseImages()
-    dataParser.PaintDatabaseImages()
+def DatabaseSession():     
+    from DBMANAGER import DownloadDatabaseImages,PaintDatabaseImages
+
+    DownloadDatabaseImages()
+    PaintDatabaseImages()
 
 if __name__ == '__main__':
     #dataParser.PaintDatabaseImages()

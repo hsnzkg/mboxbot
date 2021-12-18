@@ -1,4 +1,5 @@
 import json
+from time import ctime
 from typing import Literal
 from numpy.core.fromnumeric import size 
 import requests
@@ -8,6 +9,7 @@ import os
 import numpy as np
 from requests.api import patch
 from datetime import *
+import statistics
 
 
 coreDataPath = "coreDatabase/"
@@ -27,8 +29,8 @@ class colorCategory (enum.Enum):
     TEXT = (245,204,39,255)
     TEXTSTROKE = (0,0,0,255)
 
-
 def GetMomoPhotoIDValue(requiredKey): 
+    
     with open('{path}data.txt'.format(path = coreDataPath)) as f:
         data = f.readlines()
         dataCleared = [element.replace('VM44219:1','') for element in data]
@@ -49,12 +51,15 @@ def DownloadDatabaseImages():
     from MOBOX import GetMomoPhotoLink
     with open("{path}data.txt".format(path = coreDataPath)) as f:
         data = f.readlines()
-        dataCleared = [element.replace('VM44219:1','') for element in data]
-        dataSecondCleared = [element.replace(' ','') for element in dataCleared]
-        dataThirdCleared = [element.replace('\n','') for element in dataSecondCleared]
-        dataFourCleared = [element.replace(' ','') for element in dataThirdCleared]
-        dataFiveCleared = [element.replace('â€‹','') for element in dataFourCleared]
-        for i in dataFiveCleared:
+        dataCleared = [element.replace('[','') for element in data]
+        data2Cleared = [element.replace(']','') for element in dataCleared]
+        data3Cleared = [element.replace('\n','') for element in data2Cleared]
+        data4Cleared = [element.replace(',','') for element in data3Cleared]
+        data5Cleared = [element.replace(',','') for element in data4Cleared]
+        data6Cleared = [element.replace('"','') for element in data5Cleared]
+        data7Cleared = list(filter(len, data6Cleared))
+
+        for i in data7Cleared:
             tempMOMOID = i.split("/")[-1].split(".")[0]
             tempPHOTOID = i.split("/")[-1].split(".")[1]
             tempPHOTOURL = GetMomoPhotoLink(tempMOMOID,tempPHOTOID)       
@@ -66,7 +71,7 @@ def DownloadDatabaseImages():
                     if not block:
                         break
                     handle.write(block)
-
+        
 def PaintDatabaseImages():
     from MOBOX import GetMomoRarity
     for f in os.listdir(databasePath):
@@ -226,18 +231,35 @@ def GetUserSets(userID):
             if(i["userID"] == userID):
                 return i["sets"]
 
-def DownloadLastSales():
+def GetTransactionHistory(momoID,dateRange):
     from MOBOX import transactionAPI
     from MOBOX import ago
     from MOBOX import headers
+    from MOBOX import GetMomoPrice
+    isDone = False
+    tempPage = 1
+    tempTransactionHistory = {"max":"UNKOWN","avg":"UNKOWN","med":"UNKOWN","min":"UNKOWN"}
+    tempMomoTransactionList = []
+    tempMomoTransactionPriceList = []
+    
+    while(isDone != True):
+        requestURL = transactionAPI.format(page = tempPage,limit = 1000)
+        response = requests.get(requestURL,headers=headers)
+        json_data = json.loads(response.content)
+        for momoJson in json_data["list"]:
+            if(momoJson["prototype"] == momoID):
+                if(datetime.fromtimestamp(momoJson["crtime"]) > datetime(datetime.today().year,datetime.today().month,datetime.today().day - dateRange)):
+                    tempMomoTransactionPriceList.append(GetMomoPrice(momoJson))
+                    tempMomoTransactionList.append(momoJson)
+                else:
+                    isDone = True
+        tempPage += 1
+    if(len(tempTransactionHistory) > 0):          
+        tempTransactionHistory["max"] = max(tempMomoTransactionPriceList)
+        tempTransactionHistory["min"] = min(tempMomoTransactionPriceList)
+        tempTransactionHistory["med"] = statistics.median(tempMomoTransactionPriceList)
+        tempTransactionHistory["avg"] = round(sum(tempMomoTransactionPriceList) / len(tempMomoTransactionList),2)
+
+    return  tempTransactionHistory
 
 
-    requestURL = transactionAPI.format(ago = ago.ONE.value)
-    response = requests.get(requestURL,headers=headers)
-    json_data = json.loads(response.content)
-    return json_data
-
-
-
-
-print(DownloadLastSales())

@@ -397,14 +397,14 @@ def BotSession():
     dispatcher.add_handler(CommandHandler('clearbot',clearBotCommand))
 
 
-    updater.start_polling()
-    '''
+    #updater.start_polling()
+    
     PORT = int(os.environ.get('PORT', '8443'))
     updater.start_webhook(listen="0.0.0.0",
                         port=PORT,
                         url_path=botID,
                         webhook_url="https://moboxbot.herokuapp.com/" + botID)
-    '''
+    
     sleep(momoMarketCSTR)
     threading.Timer(momoMarketCTR, setCallback).start()
     updater.idle() 

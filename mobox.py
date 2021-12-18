@@ -323,7 +323,7 @@ def is_allTrue(tuple):
             return False
     return True
 
-def setCallback(): 
+async def  setCallback(): 
     from DBMANAGER import GetOnlineUsers
     global momoMarketLR 
     sendables = []
@@ -344,11 +344,6 @@ def setCallback():
                     if(isAddeable == True):
                         sendables.append(newJSON)
                 momoMarketLR = response
-
-
-            
-           
-
 
     if(len(sendables) > 0):    
         from DBMANAGER import GetOnlineUsers,PaintImageTexts,tempDatabasePath,GetUserSets
@@ -372,9 +367,8 @@ def setCallback():
                                 send = True
                     if(send):
                         PaintImageTexts(tempSpecs["hashrate"],tempSpecs["price"],tempSpecs["momoID"],tempSpecs["photoID"])
-                        updater.bot.sendPhoto(chat_id=user["userID"], photo = open('{path}{momoID}-{photoID}.png'.format(path = tempDatabasePath,momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]), 'rb'),caption = "{}".format(GetPriceText(tempSpecs) + SPACETEXT + GetPriceHistoryText(tempSpecs["momoID"])),parse_mode = PARSEMODE_MARKDOWN)
-                        os.remove("{path}{momoID}-{photoID}.png".format(path = tempDatabasePath, momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]))
-
+                        await updater.bot.sendPhoto(chat_id=user["userID"], photo = open('{path}{momoID}-{photoID}.png'.format(path = tempDatabasePath,momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]), 'rb'),caption = "{}".format(GetPriceText(tempSpecs) + SPACETEXT + GetPriceHistoryText(tempSpecs["momoID"])),parse_mode = PARSEMODE_MARKDOWN)
+                        await os.remove("{path}{momoID}-{photoID}.png".format(path = tempDatabasePath, momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]))
     threading.Timer(momoMarketCTR, setCallback).start()
 
 def clearBotCommand(update,context):

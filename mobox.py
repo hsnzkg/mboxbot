@@ -107,10 +107,10 @@ SETPOSITIVETEXT = "⏳ I WILL SEND YOU A MESSAGE WHEN ANY *{rarity}* price  *{op
 WELCOMETEXT = "👋WELCOME👋 *{username}*\nOUR ADMINS WILL TAKE YOUR *REGISTER* PROCESS AND YOU WILL BE NOTIFIED *SOON*...\n*YOUR ID*: *{id}*"
 MOMOPRICETEXT = "🔥*NEW MOMO LISTED*🔥\nMOMO PRICE: *{price} BUSD*\nMOMO HASHRATE: *{hashrate}*\nMOMO LEVEL: *{level}*\nMOMO RARITY: *{rarity}*\n"
 
-MOMOPRICEHISTORYTEXT = "⌛*PRICE HISTORY*⌛\n\n *YESTERDAY* 🟢MIN:{dailymin} \n 🔴MAX:{dailymax} \n 🟡AVG:{dailyavg} \n 🔵MED:{dailymed} \n\n *LAST WEEK* 🟢MIN:{weeklymin} \n 🔴MAX:{weeklymax} \n 🟡AVG:{weeklyavg} \n 🔵MED:{weeklymed}"
+MOMOPRICEHISTORYTEXT = "⌛*PRICE HISTORY*⌛\n\n *YESTERDAY*\n🟢*MIN*: *{dailymin}* *BUSD* \n🔴*MAX*: *{dailymax}* *BUSD* \n🟡*AVG*: *{dailyavg}* *BUSD* \n🔵*MED*: *{dailymed}* *BUSD* \n\n *LAST WEEK*\n🟢*MIN*: *{weeklymin}* *BUSD*\n🔴*MAX*: *{weeklymax}* *BUSD*\n🟡*AVG*: *{weeklyavg}* *BUSD* \n🔵*MED*: *{weeklymed}* *BUSD*"
 
 STARTTEXT = "*👋Welcome MOMO Catcher👋*\nThis bot can useful for catching *CHEAP MOMO's* in MOMO market before *EVERYONE*🔥\n\nYou can find bot *command usages* in */help*"
-SPACETEXT = "\n\n\n\n"
+SPACETEXT = "\n\n"
 
 STOPPROCESSTEXT = "⚠️STOPPING ALL */SET* PROCESS..."
 STARTPROCESSTEXT = "⚠️STARTING ALL */SET* PROCESS..."
@@ -174,13 +174,13 @@ def GetMomoID(momoJson):
 def GetMomoPrice(momoJson):
     if(momoJson):
         if("startPrice" in momoJson):
-            return momoJson["startPrice"]/1000000000
+            return round(momoJson["startPrice"]/1000000000,2)
         elif("endPrice" in momoJson): 
-            return momoJson["endPrice"]/1000000000
+            return round(momoJson["endPrice"]/1000000000,2)
         elif("bidPrice" in momoJson): 
-            return momoJson["bidPrice"]/1000000000
+            return round(momoJson["bidPrice"]/1000000000,2)
         else:
-            return momoJson["nowPrice"]/1000000000
+            return round(momoJson["nowPrice"]/1000000000,2)
     else:
         return("NO  DATA")
 
@@ -385,6 +385,7 @@ def clearBotCommand(update,context):
 def BotSession():
     global updater
     updater = Updater(botID,use_context=True)
+
    
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CommandHandler('start',startCommand))
@@ -397,12 +398,13 @@ def BotSession():
 
 
     #updater.start_polling()
-
+   
     PORT = int(os.environ.get('PORT', '8443'))
     updater.start_webhook(listen="0.0.0.0",
                         port=PORT,
                         url_path=botID,
                         webhook_url="https://moboxbot.herokuapp.com/" + botID)
+   
     sleep(momoMarketCSTR)
     threading.Timer(momoMarketCTR, setCallback).start()
     updater.idle() 
@@ -438,6 +440,7 @@ def DatabaseSession():
     PaintDatabaseImages()
 
 if __name__ == '__main__':
-    #DBMANAGER.PaintDatabaseImages()
+    #from DBMANAGER import PaintDatabaseImages
+    #PaintDatabaseImages()
     #DBMANAGER.DownloadDatabaseImages()  
     BotSession()

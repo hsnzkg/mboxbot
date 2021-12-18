@@ -97,7 +97,7 @@ def PaintDatabaseImages():
         draw = ImageDraw.Draw(finalPaintedImage)
 
         #marka
-        draw.text(((512/2-190),(512/2 +240)),"@MOMOCATCHERBOT",colorCategory.TEXT.value, stroke_width=2,stroke_fill=colorCategory.TEXTSTROKE.value,font =smallFont,anchor="mm")
+        draw.text(((512/2-160),(512/2 +240)),"@MOMOCATCHERBOT",colorCategory.TEXT.value, stroke_width=2,stroke_fill=colorCategory.TEXTSTROKE.value,font =smallFont,anchor="mm")
         finalPaintedImage.save("{path}{mergedImage}.png".format(path =paintedDatabasePath, mergedImage = tempmomoID + "-" + tempPhotoID),"PNG")
 
 def PaintImageTexts(hashrate,price,momoID,momoPhotoID):
@@ -248,7 +248,7 @@ def GetTransactionHistory(momoID,dateRange):
     tempMomoTransactionPriceList = []
     
     while(isDone != True):
-        requestURL = transactionAPI.format(page = tempPage,limit = 1000)
+        requestURL = transactionAPI.format(page = tempPage,limit = 500)
         response = requests.get(requestURL,headers=headers)
         json_data = json.loads(response.content)
         for momoJson in json_data["list"]:
@@ -259,10 +259,10 @@ def GetTransactionHistory(momoID,dateRange):
                 else:
                     isDone = True
         tempPage += 1
-    if(len(tempTransactionHistory) > 0):          
-        tempTransactionHistory["max"] = max(tempMomoTransactionPriceList)
-        tempTransactionHistory["min"] = min(tempMomoTransactionPriceList)
-        tempTransactionHistory["med"] = statistics.median(tempMomoTransactionPriceList)
+    if(len(tempMomoTransactionPriceList) > 0):          
+        tempTransactionHistory["max"] = round(max(tempMomoTransactionPriceList),2)
+        tempTransactionHistory["min"] = round(min(tempMomoTransactionPriceList),2)
+        tempTransactionHistory["med"] = round(statistics.median(tempMomoTransactionPriceList),2)
         tempTransactionHistory["avg"] = round(sum(tempMomoTransactionPriceList) / len(tempMomoTransactionList),2)
 
     return  tempTransactionHistory

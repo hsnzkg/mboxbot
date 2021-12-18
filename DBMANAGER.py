@@ -33,11 +33,16 @@ def GetMomoPhotoIDValue(requiredKey):
     
     with open('{path}data.txt'.format(path = coreDataPath)) as f:
         data = f.readlines()
-        dataCleared = [element.replace('VM44219:1','') for element in data]
-        dataSecondCleared = [element.replace(' ','') for element in dataCleared]
+        dataCleared = [element.replace('[','') for element in data]
+        data2Cleared = [element.replace(']','') for element in dataCleared]
+        data3Cleared = [element.replace('\n','') for element in data2Cleared]
+        data4Cleared = [element.replace(',','') for element in data3Cleared]
+        data5Cleared = [element.replace(',','') for element in data4Cleared]
+        data6Cleared = [element.replace('"','') for element in data5Cleared]
+        data7Cleared = list(filter(len, data6Cleared))
 
     data_set = {}
-    for i in dataSecondCleared:
+    for i in data7Cleared:
         miniData = i.split('img')
         values = miniData[1]
         values = values.split('.')

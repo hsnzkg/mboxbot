@@ -11,7 +11,7 @@ import os
 from time import sleep
 import datetime
 from requests.models import Response
-
+import asyncio
 import telegram
 from telegram import message
 from telegram import bot
@@ -323,7 +323,7 @@ def is_allTrue(tuple):
             return False
     return True
 
-async def  setCallback(): 
+def setCallback(): 
     from DBMANAGER import GetOnlineUsers
     global momoMarketLR 
     sendables = []
@@ -367,9 +367,9 @@ async def  setCallback():
                                 send = True
                     if(send):
                         PaintImageTexts(tempSpecs["hashrate"],tempSpecs["price"],tempSpecs["momoID"],tempSpecs["photoID"])
-                        await updater.bot.sendPhoto(chat_id=user["userID"], photo = open('{path}{momoID}-{photoID}.png'.format(path = tempDatabasePath,momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]), 'rb'),caption = "{}".format(GetPriceText(tempSpecs) + SPACETEXT + GetPriceHistoryText(tempSpecs["momoID"])),parse_mode = PARSEMODE_MARKDOWN)
-                        await os.remove("{path}{momoID}-{photoID}.png".format(path = tempDatabasePath, momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]))
-    threading.Timer(momoMarketCTR, setCallback).start()
+                        updater.bot.sendPhoto(chat_id=user["userID"], photo = open('{path}{momoID}-{photoID}.png'.format(path = tempDatabasePath,momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]), 'rb'),caption = "{}".format(GetPriceText(tempSpecs) + SPACETEXT + GetPriceHistoryText(tempSpecs["momoID"])),parse_mode = PARSEMODE_MARKDOWN)
+                        os.remove("{path}{momoID}-{photoID}.png".format(path = tempDatabasePath, momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]))
+    threading.Timer(momoMarketCTR,setCallback).start()
 
 def clearBotCommand(update,context):
     from DBMANAGER import ClearUserSets
@@ -400,7 +400,7 @@ def BotSession():
                         webhook_url="https://moboxbot.herokuapp.com/" + botID)
     
     sleep(momoMarketCSTR)
-    threading.Timer(momoMarketCTR, setCallback).start()
+    threading.Timer(momoMarketCTR,setCallback).start()
     updater.idle() 
 
 def DictCompare(d1, d2):

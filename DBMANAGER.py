@@ -49,7 +49,7 @@ def GetMomoPhotoIDValue(requiredKey):
         key = values[0].replace('/','')
         value =values[1]
         data_set[key] = value
-    
+    f.close()
     return  data_set[str(requiredKey)]
 
 def DownloadDatabaseImages():
@@ -76,6 +76,7 @@ def DownloadDatabaseImages():
                     if not block:
                         break
                     handle.write(block)
+    f.close()
         
 def PaintDatabaseImages():
     from MOBOX import GetMomoRarity
@@ -158,7 +159,9 @@ def CheckUserDatabase(userID):
         data = json.load(f)
         for i in data["users"]:
             if(i["userID"] == userID):
+                f.close()
                 return True
+        f.close()
         return False
 
 def SaveUser(userID,userName):
@@ -175,17 +178,21 @@ def SaveUser(userID,userName):
         for i in data["users"]:
             if(i["userID"] == userID):
                 isValid = True
+    f.close()
     if(isValid == False):          
         data["users"].append(tempUser)
         with open('{path}users.json'.format(path = coreDataPath), 'w', encoding='utf-8') as f:
             json.dump(data, f,default=str)
+    f.close()
 
 def ClearAllDatabase():
     with open('{path}users.json'.format(path = coreDataPath), 'r', encoding='utf-8') as f:
         data = json.load(f)
+        f.close()
     data["users"].clear()
     with open('{path}users.json'.format(path = coreDataPath), 'w', encoding='utf-8') as f:
         json.dump(data, f)
+        f.close()
 
 def ClearUserSets(userID):
     with open('{path}users.json'.format(path = coreDataPath), 'r', encoding='utf-8') as f:
@@ -193,8 +200,10 @@ def ClearUserSets(userID):
         for i in data["users"]:
             if(i["userID"] == userID):
                 i["sets"].clear()
+    f.close()
     with open('{path}users.json'.format(path = coreDataPath), 'w', encoding='utf-8') as f:
         json.dump(data, f)
+    f.close()
 
 def CheckUserSets(userID,set):
     from MOBOX import DictCompare
@@ -207,7 +216,7 @@ def CheckUserSets(userID,set):
                 for x in i["sets"]:
                     if(DictCompare(x,set)):
                         isValid = True
-                
+    f.close()              
     return isValid
 
 def GetOnlineUsers():
@@ -217,6 +226,7 @@ def GetOnlineUsers():
         for i in data["users"]:
             if(i["status"] == "on"):
                 tempOnlineUsers.append(i)
+    f.close()
     return tempOnlineUsers
 
 def SaveUserSet(userID,set):
@@ -226,8 +236,10 @@ def SaveUserSet(userID,set):
             if(i["userID"] == userID):
                 i["sets"].append(set)
                 i["status"] = "on"
+    f.close()
     with open('{path}users.json'.format(path = coreDataPath), 'w', encoding='utf-8') as f:
         json.dump(data, f)
+    f.close()
 
 def GetUserSets(userID):
     with open('{path}users.json'.format(path = coreDataPath), 'r', encoding='utf-8') as f:
@@ -235,10 +247,10 @@ def GetUserSets(userID):
         for i in data["users"]:
             if(i["userID"] == userID):
                 return i["sets"]
+    f.close()
 
 def GetTransactionHistory(momoID,dateRange):
     from MOBOX import transactionAPI
-    from MOBOX import ago
     from MOBOX import headers
     from MOBOX import GetMomoPrice
     isDone = False
@@ -248,7 +260,7 @@ def GetTransactionHistory(momoID,dateRange):
     tempMomoTransactionPriceList = []
     
     while(isDone != True):
-        requestURL = transactionAPI.format(page = tempPage,limit = 1000)
+        requestURL = transactionAPI.format(page = tempPage,limit = 500)
         response = requests.get(requestURL,headers=headers)
         json_data = json.loads(response.content)
         for momoJson in json_data["list"]:

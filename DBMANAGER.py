@@ -248,7 +248,7 @@ def GetTransactionHistory(momoID,dateRange):
     tempMomoTransactionPriceList = []
     
     while(isDone != True):
-        requestURL = transactionAPI.format(page = tempPage,limit = 500)
+        requestURL = transactionAPI.format(page = tempPage,limit = 1000)
         response = requests.get(requestURL,headers=headers)
         json_data = json.loads(response.content)
         for momoJson in json_data["list"]:

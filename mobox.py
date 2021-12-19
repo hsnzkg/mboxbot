@@ -9,7 +9,7 @@ import json
 import enum
 import os
 from time import sleep
-import datetime
+from datetime import *
 from requests.models import Response
 import asyncio
 import telegram
@@ -20,7 +20,7 @@ from telegram import parsemode
 from telegram import update
 from telegram.constants import PARSEMODE_HTML, PARSEMODE_MARKDOWN, PARSEMODE_MARKDOWN_V2
 
-
+import statistics
 from telegram import ParseMode
 from telegram.ext.updater import Updater
 from telegram.update import Update
@@ -34,6 +34,7 @@ from telegram.ext import Defaults
 
 
 #region ENUMS
+
 class category (enum.Enum):
     ALL = "0"
     WIND = "1"
@@ -82,12 +83,6 @@ momoMarketCTR = 5
 momoMarketCSTR = 5
 #endregion MOMOMARKET
 
-#region TRANSACTION
-#endregion TRANSACTION
-
-
-
-
 #region TELEGRAM
 channelID = "-1001746717168"
 botID = "5074248859:AAHIOiI4-CnpoCX4Qb0XTqD6qbkY8x-go_Q"
@@ -103,9 +98,9 @@ transactionAPI = 'https://nftapi.mobox.io/auction/logs?&page={page}&limit={limit
 
 #region TEXT MESSAGES
         
-SETPOSITIVETEXT = "⏳ I WILL SEND YOU A MESSAGE WHEN ANY *{rarity}* price  *{operator}* *BUSD{price}*\n"
+SETPOSITIVETEXT = "⏳ I WILL SEND YOU A MESSAGE WHEN\nANY *{rarity}* price  *{operator}* *BUSD{price}*\n"
 WELCOMETEXT = "👋WELCOME👋 *{username}*\nOUR ADMINS WILL TAKE YOUR *REGISTER* PROCESS AND YOU WILL BE NOTIFIED *SOON*...\n*YOUR ID*: *{id}*"
-MOMOPRICETEXT = "🔥*NEW MOMO LISTED*🔥\nMOMO PRICE: *{price} BUSD*\nMOMO HASHRATE: *{hashrate}*\nMOMO LEVEL: *{level}*\nMOMO RARITY: *{rarity}*\n"
+MOMOPRICETEXT = "🔥*NEW MOMO LISTED*🔥\nPRICE: *{price} BUSD*\nHASHRATE: *{hashrate}*\nLEVEL: *{level}*\nRARITY: *{rarity}*\nDATE: *{date}*"
 
 MOMOPRICEHISTORYTEXT = "⌛*PRICE HISTORY*⌛\n\n *YESTERDAY*\n🟢*MIN*: *{dailymin}* *BUSD* \n🔴*MAX*: *{dailymax}* *BUSD* \n🟡*AVG*: *{dailyavg}* *BUSD* \n🔵*MED*: *{dailymed}* *BUSD* \n\n *LAST WEEK*\n🟢*MIN*: *{weeklymin}* *BUSD*\n🔴*MAX*: *{weeklymax}* *BUSD*\n🟡*AVG*: *{weeklyavg}* *BUSD* \n🔵*MED*: *{weeklymed}* *BUSD*"
 
@@ -171,6 +166,9 @@ def GetMomoID(momoJson):
     else:   
         return "NO  DATA"
 
+def GetMomoDate(momoJson):
+    return datetime.fromtimestamp(momoJson["uptime"])
+    
 def GetMomoPrice(momoJson):
     if(momoJson):
         if("startPrice" in momoJson):
@@ -215,12 +213,12 @@ def GetMomoAllSpecs(momoJson):
         specs["hashrate"] = GetMomoHashRate(momoJson)
         specs["photoLink"] = GetMomoPhotoLink(GetMomoID(momoJson),GetMomoPhotoID(GetMomoID(momoJson)))
         specs["rarity"] = GetMomoRarity(GetMomoID(momoJson))
+        specs["date"] = GetMomoDate(momoJson)
         return specs
     else:
         return("NO  DATA")
 
 def GetPriceHistoryText(momoID):
-    from DBMANAGER import GetTransactionHistory
     tempDailyTransactionHistory = GetTransactionHistory(momoID,1)
     tempWeeklyTransactionHistory = GetTransactionHistory(momoID,7)
 
@@ -235,9 +233,8 @@ def GetPriceHistoryText(momoID):
         weeklyavg = tempWeeklyTransactionHistory["avg"],
         weeklymed = tempWeeklyTransactionHistory["med"])
 
-
 def GetPriceText(momoJson):
-    return MOMOPRICETEXT.format(price = momoJson["price"],hashrate = momoJson["hashrate"], level = momoJson["level"], rarity = momoJson["rarity"])
+    return MOMOPRICETEXT.format(date = momoJson["date"], price = momoJson["price"],hashrate = momoJson["hashrate"], level = momoJson["level"], rarity = momoJson["rarity"])
      
 def startCommand(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text=STARTTEXT,parse_mode = PARSEMODE_MARKDOWN)
@@ -347,8 +344,6 @@ def setCallback():
 
     if(len(sendables) > 0):    
         from DBMANAGER import GetOnlineUsers,PaintImageTexts,tempDatabasePath,GetUserSets
-
-
         for x in sendables:
             send = False
             tempSpecs = GetMomoAllSpecs(x)
@@ -369,14 +364,78 @@ def setCallback():
                         PaintImageTexts(tempSpecs["hashrate"],tempSpecs["price"],tempSpecs["momoID"],tempSpecs["photoID"])
                         updater.bot.sendPhoto(chat_id=user["userID"], photo = open('{path}{momoID}-{photoID}.png'.format(path = tempDatabasePath,momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]), 'rb'),caption = "{}".format(GetPriceText(tempSpecs) + SPACETEXT + GetPriceHistoryText(tempSpecs["momoID"])),parse_mode = PARSEMODE_MARKDOWN)
                         os.remove("{path}{momoID}-{photoID}.png".format(path = tempDatabasePath, momoID = tempSpecs["momoID"],photoID = tempSpecs["photoID"]))
+   
     threading.Timer(momoMarketCTR,setCallback).start()
+
+
+
+
+def GetTransactionHistory(momoID,dateRange):
+    from MOBOX import transactionAPI
+    from MOBOX import headers
+    from MOBOX import GetMomoPrice
+    isDone = False
+    tempPage = 1
+    tempTransactionHistory = {"max":"UNKOWN","avg":"UNKOWN","med":"UNKOWN","min":"UNKOWN"}
+    tempMomoTransactionList = []
+    tempMomoTransactionPriceList = []
+    
+    while(isDone != True):
+        requestURL = transactionAPI.format(page = tempPage,limit = 1000)
+        response = requests.get(requestURL,headers=headers)
+        json_data = json.loads(response.content)
+        
+
+        
+        for momoJson in json_data["list"]:
+            if(momoJson["prototype"] == momoID):
+                if(datetime.fromtimestamp(momoJson["crtime"]) > datetime(datetime.today().year,datetime.today().month,datetime.today().day - dateRange)):
+                    tempMomoTransactionPriceList.append(GetMomoPrice(momoJson))
+                    tempMomoTransactionList.append(momoJson)
+                else:
+                    isDone = True
+        tempPage += 1
+    if(len(tempMomoTransactionPriceList) > 0):          
+        tempTransactionHistory["max"] = round(max(tempMomoTransactionPriceList),2)
+        tempTransactionHistory["min"] = round(min(tempMomoTransactionPriceList),2)
+        tempTransactionHistory["med"] = round(GetListMed(tempMomoTransactionPriceList),2)
+        tempTransactionHistory["avg"] = round(sum(tempMomoTransactionPriceList) / len(tempMomoTransactionList),2)
+
+    return  tempTransactionHistory
+
+
+def GetListMed(list):
+    return statistics.median(list)
+
+
 
 def clearBotCommand(update,context):
     from DBMANAGER import ClearUserSets
     ClearUserSets(update.effective_chat.id)
     context.bot.send_message(chat_id=update.effective_chat.id, text=CLEARPROCESSTEXT,parse_mode = PARSEMODE_MARKDOWN)
 
-def BotSession():
+def BotPCSession():
+    global updater
+    updater = Updater(botID,use_context=True)
+
+    dispatcher = updater.dispatcher
+    dispatcher.add_handler(CommandHandler('start',startCommand))
+    dispatcher.add_handler(CommandHandler('help',helpCommand))
+    dispatcher.add_handler(CommandHandler('register',registerCommand))
+    dispatcher.add_handler(CommandHandler('set',setCommand))
+    dispatcher.add_handler(CommandHandler('stopbot',stopBotCommand))
+    dispatcher.add_handler(CommandHandler('startbot',startBotCommand))
+    dispatcher.add_handler(CommandHandler('clearbot',clearBotCommand))
+
+
+    updater.start_polling()  
+    sleep(momoMarketCSTR)
+
+
+    threading.Timer(momoMarketCTR,setCallback).start()
+    updater.idle() 
+
+def BotHerokuSession():
     global updater
     updater = Updater(botID,use_context=True)
 
@@ -389,9 +448,6 @@ def BotSession():
     dispatcher.add_handler(CommandHandler('stopbot',stopBotCommand))
     dispatcher.add_handler(CommandHandler('startbot',startBotCommand))
     dispatcher.add_handler(CommandHandler('clearbot',clearBotCommand))
-
-
-    #updater.start_polling()
     
     PORT = int(os.environ.get('PORT', '8443'))
     updater.start_webhook(listen="0.0.0.0",
@@ -401,7 +457,7 @@ def BotSession():
     
     sleep(momoMarketCSTR)
     threading.Timer(momoMarketCTR,setCallback).start()
-    updater.idle() 
+    updater.idle()     
 
 def DictCompare(d1, d2):
     d1_values = set(d1.values())
@@ -417,24 +473,11 @@ def DictCompare(d1, d2):
     else:
         return False
 
-def ChannelSession():
-    from DBMANAGER import PaintImageTexts,tempDatabasePath
-
-    updater = Updater(botID,use_context=True)
-    lastMomosJSON = GetLastMomos(currentChain,currentPage,currentLimit,currentCategory,currentvType,currentSort)
-    lastMomoJSONDatas = GetMomoAllSpecs(lastMomosJSON[0])
-    PaintImageTexts(lastMomoJSONDatas["hashrate"],lastMomoJSONDatas["price"],lastMomoJSONDatas["momoID"],lastMomoJSONDatas["photoID"])
-    updater.bot.sendPhoto(chat_id='@momotracker',photo =open('{path}{momoID}-{photoID}.png'.format(path = tempDatabasePath,momoID = lastMomoJSONDatas["momoID"],photoID = lastMomoJSONDatas["photoID"]), 'rb'),caption = "{}".format(GetPriceText(lastMomoJSONDatas)),parse_mode = PARSEMODE_MARKDOWN)
-    os.remove("{path}{momoID}-{photoID}.png".format(path = tempDatabasePath, momoID = lastMomoJSONDatas["momoID"],photoID = lastMomoJSONDatas["photoID"]))
-
-def DatabaseSession():     
-    from DBMANAGER import DownloadDatabaseImages,PaintDatabaseImages
-
-    DownloadDatabaseImages()
-    PaintDatabaseImages()
-
 if __name__ == '__main__':
     #from DBMANAGER import PaintDatabaseImages
     #PaintDatabaseImages()
     #DBMANAGER.DownloadDatabaseImages()  
-    BotSession()
+    #BotPCSession() 
+    s = datetime.now()
+    print(GetPriceHistoryText(22001))   
+    print( datetime.now() - s)

@@ -9,7 +9,7 @@ import os
 import numpy as np
 from requests.api import patch
 from datetime import *
-import statistics
+
 
 
 coreDataPath = "coreDatabase/"
@@ -249,34 +249,6 @@ def GetUserSets(userID):
                 return i["sets"]
     f.close()
 
-def GetTransactionHistory(momoID,dateRange):
-    from MOBOX import transactionAPI
-    from MOBOX import headers
-    from MOBOX import GetMomoPrice
-    isDone = False
-    tempPage = 1
-    tempTransactionHistory = {"max":"UNKOWN","avg":"UNKOWN","med":"UNKOWN","min":"UNKOWN"}
-    tempMomoTransactionList = []
-    tempMomoTransactionPriceList = []
-    
-    while(isDone != True):
-        requestURL = transactionAPI.format(page = tempPage,limit = 500)
-        response = requests.get(requestURL,headers=headers)
-        json_data = json.loads(response.content)
-        for momoJson in json_data["list"]:
-            if(momoJson["prototype"] == momoID):
-                if(datetime.fromtimestamp(momoJson["crtime"]) > datetime(datetime.today().year,datetime.today().month,datetime.today().day - dateRange)):
-                    tempMomoTransactionPriceList.append(GetMomoPrice(momoJson))
-                    tempMomoTransactionList.append(momoJson)
-                else:
-                    isDone = True
-        tempPage += 1
-    if(len(tempMomoTransactionPriceList) > 0):          
-        tempTransactionHistory["max"] = round(max(tempMomoTransactionPriceList),2)
-        tempTransactionHistory["min"] = round(min(tempMomoTransactionPriceList),2)
-        tempTransactionHistory["med"] = round(statistics.median(tempMomoTransactionPriceList),2)
-        tempTransactionHistory["avg"] = round(sum(tempMomoTransactionPriceList) / len(tempMomoTransactionList),2)
 
-    return  tempTransactionHistory
 
 

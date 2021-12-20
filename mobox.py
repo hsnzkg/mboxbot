@@ -1,42 +1,15 @@
-from json.encoder import py_encode_basestring
-from logging import NullHandler
-from typing import final
-from PIL.Image import RASTERIZE
-from numpy import False_
-
-import threading, queue
 import requests
 import json
 import enum
 import os
-
+import threading
 from time import sleep
 from datetime import *
-from requests.models import Response
-
-import asyncio
-import telegram
-
-from telegram import message
-from telegram import bot
-from telegram import chat
-from telegram import parsemode
-from telegram import update
-from telegram.constants import PARSEMODE_HTML, PARSEMODE_MARKDOWN, PARSEMODE_MARKDOWN_V2
-
-from multiprocessing.pool import ThreadPool
-from concurrent.futures import ThreadPoolExecutor
-
+from telegram.constants import  PARSEMODE_MARKDOWN
 import statistics
-
-from telegram import ParseMode
 from telegram.ext.updater import Updater
-from telegram.update import Update
-from telegram.ext.callbackcontext import CallbackContext
 from telegram.ext.commandhandler import CommandHandler
-from telegram.ext.messagehandler import MessageHandler
-from telegram.ext.filters import Filters
-from telegram.ext import Defaults
+
 
 
 
@@ -377,38 +350,26 @@ def setCallback():
 
 
 
-def DownloadTransactionJSON(page,URL,header,list,dateRange):
-    requestURL = URL.format(page = page,limit = 5000)
-    response = requests.get(requestURL,headers=header)
-    json_data = json.loads(response.content)
-    list.extend(json_data["list"])
-    return datetime.fromtimestamp(json_data["list"][-1]["crtime"]) <  datetime(datetime.today().year,datetime.today().month,datetime.today().day - dateRange)
-
-
-
-
-
 def GetTransactionHistory(momoID,dateRange):
     from MOBOX import transactionAPI
     from MOBOX import headers
     from MOBOX import GetMomoPrice
     from MOBOX import GetMomoID
     
-
-    tempMaxWorker = 10
     tempPage = 1
     tempTransactionHistory = {"max":"UNKOWN","avg":"UNKOWN","med":"UNKOWN","min":"UNKOWN"}
     tempMomosTransactionHistory = []    
     downloadStart = datetime.now()
 
     while (True):
-        requestURL = transactionAPI.format(page = tempPage,limit = 1000)
+        requestURL = transactionAPI.format(page = tempPage,limit = 30000)
         response = requests.get(requestURL,headers=headers)
         json_data = json.loads(response.content)
         tempMomosTransactionHistory.extend(json_data["list"])  
         if(datetime.fromtimestamp(json_data["list"][-1]["crtime"]) <  datetime(datetime.today().year,datetime.today().month,datetime.today().day - dateRange)):          
             break                       
         tempPage += 1
+
     
     sortStart = datetime.now()
     tempMomoTransactionPriceList = list(map(GetMomoPrice, list(filter(lambda x: GetMomoID(x) == momoID, tempMomosTransactionHistory))))
@@ -496,5 +457,6 @@ if __name__ == '__main__':
     #from DBMANAGER import PaintDatabaseImages
     #PaintDatabaseImages()
     #DBMANAGER.DownloadDatabaseImages()  
-    #BotPCSession() 
-    GetTransactionHistory(22001,1)
+    #BotPCSession()
+    BotHerokuSession() 
+    #GetTransactionHistory(22001,1)

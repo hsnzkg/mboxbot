@@ -364,7 +364,7 @@ def GetTransactionHistory(momoID,dateRange):
         if(datetime.fromtimestamp(json_data["list"][-1]["crtime"]) <  datetime(datetime.today().year,datetime.today().month,datetime.today().day - dateRange)):          
             break                       
         tempPage += 1
-
+    downloadEnd = datetime.now()
     
     sortStart = datetime.now()
     tempMomoTransactionPriceList = list(map(GetMomoPrice, list(filter(lambda x: GetMomoID(x) == momoID, tempMomosTransactionHistory))))
@@ -374,8 +374,10 @@ def GetTransactionHistory(momoID,dateRange):
         tempTransactionHistory["min"] = round(min(tempMomoTransactionPriceList),2)
         tempTransactionHistory["med"] = round(GetListMed(tempMomoTransactionPriceList),2)
         tempTransactionHistory["avg"] = round(sum(tempMomoTransactionPriceList) / len(tempMomoTransactionPriceList),2)
-    print("sorttime",datetime.now() - sortStart)
-    print("downloadtime",datetime.now() - downloadStart)
+    sortEnd = datetime.now()
+    
+    print("sorttime",sortEnd - sortStart)
+    print("downloadtime",downloadEnd - downloadStart)
     return  tempTransactionHistory
 
 

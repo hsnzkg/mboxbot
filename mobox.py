@@ -357,7 +357,7 @@ def GetTransactionHistory(momoID,dateRange):
     downloadStart = datetime.now()
 
     while (True):
-        requestURL = transactionAPI.format(page = tempPage,limit = 10000)
+        requestURL = transactionAPI.format(page = tempPage,limit = 1000)
         response = requests.get(requestURL,headers=headers)
         json_data = json.loads(response.content)
         tempMomosTransactionHistory.extend(json_data["list"])  

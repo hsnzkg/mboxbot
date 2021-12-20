@@ -3,16 +3,20 @@ from logging import NullHandler
 from typing import final
 from PIL.Image import RASTERIZE
 from numpy import False_
-import threading
+
+import threading, queue
 import requests
 import json
 import enum
 import os
+
 from time import sleep
 from datetime import *
 from requests.models import Response
+
 import asyncio
 import telegram
+
 from telegram import message
 from telegram import bot
 from telegram import chat
@@ -21,6 +25,7 @@ from telegram import update
 from telegram.constants import PARSEMODE_HTML, PARSEMODE_MARKDOWN, PARSEMODE_MARKDOWN_V2
 
 import statistics
+
 from telegram import ParseMode
 from telegram.ext.updater import Updater
 from telegram.update import Update
@@ -374,33 +379,28 @@ def GetTransactionHistory(momoID,dateRange):
     from MOBOX import transactionAPI
     from MOBOX import headers
     from MOBOX import GetMomoPrice
-    isDone = False
+    from MOBOX import GetMomoID
+    jsonQueue = queue.Queue()
     tempPage = 1
     tempTransactionHistory = {"max":"UNKOWN","avg":"UNKOWN","med":"UNKOWN","min":"UNKOWN"}
-    tempMomoTransactionList = []
-    tempMomoTransactionPriceList = []
+    tempMomosTransactionHistory = []    
     
-    while(isDone != True):
+    while (True):
         requestURL = transactionAPI.format(page = tempPage,limit = 1000)
         response = requests.get(requestURL,headers=headers)
         json_data = json.loads(response.content)
-        
-
-        
-        for momoJson in json_data["list"]:
-            if(momoJson["prototype"] == momoID):
-                if(datetime.fromtimestamp(momoJson["crtime"]) > datetime(datetime.today().year,datetime.today().month,datetime.today().day - dateRange)):
-                    tempMomoTransactionPriceList.append(GetMomoPrice(momoJson))
-                    tempMomoTransactionList.append(momoJson)
-                else:
-                    isDone = True
+        tempMomosTransactionHistory.extend(json_data["list"])  
+        if(datetime.fromtimestamp(json_data["list"][-1]["crtime"]) <  datetime(datetime.today().year,datetime.today().month,datetime.today().day - dateRange)):          
+            break                       
         tempPage += 1
+
+    tempMomoTransactionPriceList = list(map(GetMomoPrice, list(filter(lambda x: GetMomoID(x) == momoID, tempMomosTransactionHistory))))
+
     if(len(tempMomoTransactionPriceList) > 0):          
         tempTransactionHistory["max"] = round(max(tempMomoTransactionPriceList),2)
         tempTransactionHistory["min"] = round(min(tempMomoTransactionPriceList),2)
         tempTransactionHistory["med"] = round(GetListMed(tempMomoTransactionPriceList),2)
-        tempTransactionHistory["avg"] = round(sum(tempMomoTransactionPriceList) / len(tempMomoTransactionList),2)
-
+        tempTransactionHistory["avg"] = round(sum(tempMomoTransactionPriceList) / len(tempMomoTransactionPriceList),2)
     return  tempTransactionHistory
 
 

@@ -202,7 +202,6 @@ def ClearUserSets(userID):
 
 def CheckUserSets(userID,set):
     from MOBOX import DictCompare
-
     with open('{path}users.json'.format(path = coreDataPath), 'r', encoding='utf-8') as f:
         data = json.load(f)
         for i in data["users"]:

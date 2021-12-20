@@ -23,7 +23,9 @@ from telegram import chat
 from telegram import parsemode
 from telegram import update
 from telegram.constants import PARSEMODE_HTML, PARSEMODE_MARKDOWN, PARSEMODE_MARKDOWN_V2
+
 from multiprocessing.pool import ThreadPool
+from concurrent.futures import ThreadPoolExecutor
 
 import statistics
 
@@ -375,10 +377,12 @@ def setCallback():
 
 
 
-def DownloadTransactionJSON(momoID,dateRange,page,URL,header,list):
-    tempJson = []
-    
-    
+def DownloadTransactionJSON(page,URL,header,list,dateRange):
+    requestURL = URL.format(page = page,limit = 5000)
+    response = requests.get(requestURL,headers=header)
+    json_data = json.loads(response.content)
+    list.extend(json_data["list"])
+    return datetime.fromtimestamp(json_data["list"][-1]["crtime"]) <  datetime(datetime.today().year,datetime.today().month,datetime.today().day - dateRange)
 
 
 
@@ -397,9 +401,8 @@ def GetTransactionHistory(momoID,dateRange):
     tempMomosTransactionHistory = []    
     downloadStart = datetime.now()
 
-    
     while (True):
-        requestURL = transactionAPI.format(page = tempPage,limit = 5000)
+        requestURL = transactionAPI.format(page = tempPage,limit = 1000)
         response = requests.get(requestURL,headers=headers)
         json_data = json.loads(response.content)
         tempMomosTransactionHistory.extend(json_data["list"])  

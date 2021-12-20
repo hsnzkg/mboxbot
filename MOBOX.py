@@ -515,5 +515,5 @@ if __name__ == '__main__':
     #from DBMANAGER import PaintDatabaseImages
     #PaintDatabaseImages()
     #DBMANAGER.DownloadDatabaseImages()  
-    #BotPCSession()
-    BotHerokuSession() 
+    BotPCSession()
+    #BotHerokuSession() 

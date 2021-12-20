@@ -1,3 +1,4 @@
+
 import requests
 import json
 import enum
@@ -9,8 +10,15 @@ from telegram.constants import  PARSEMODE_MARKDOWN
 import statistics
 from telegram.ext.updater import Updater
 from telegram.ext.commandhandler import CommandHandler
+from telegram.ext import RegexHandler,MessageHandler
+from telegram.ext import Filters
 
 
+#region TRANSACTION
+transactionCTR = 3600
+dailyTransactionList = []
+weeklyTransactionList = []
+#endregion TRANSACTION
 
 
 
@@ -44,11 +52,6 @@ class vType (enum.Enum):
     EPIC = "5"
     LEGENDARY = "6"
 
-class ago (enum.Enum):
-    ONE = 1
-    SEVEN = 7
-    ALL = "ALL"
-
 #endregion ENUMS
 
 #region MOMOMARKET
@@ -60,8 +63,8 @@ currentChain = 'BNB'
 currentPage = 1
 currentLimit = 15
 momoMarketLR = []
-momoMarketCTR = 5
-momoMarketCSTR = 5
+momoMarketCTR = 1
+momoMarketCSTR = 10
 #endregion MOMOMARKET
 
 #region TELEGRAM
@@ -79,12 +82,10 @@ transactionAPI = 'https://nftapi.mobox.io/auction/logs?&page={page}&limit={limit
 
 #region TEXT MESSAGES
         
-SETPOSITIVETEXT = "⏳ I WILL SEND YOU A MESSAGE WHEN\nANY *{rarity}* price  *{operator}* *BUSD{price}*\n"
+
 WELCOMETEXT = "👋WELCOME👋 *{username}*\nOUR ADMINS WILL TAKE YOUR *REGISTER* PROCESS AND YOU WILL BE NOTIFIED *SOON*...\n*YOUR ID*: *{id}*"
 MOMOPRICETEXT = "🔥*NEW MOMO LISTED*🔥\nPRICE: *{price} BUSD*\nHASHRATE: *{hashrate}*\nLEVEL: *{level}*\nRARITY: *{rarity}*\nDATE: *{date}*"
-
 MOMOPRICEHISTORYTEXT = "⌛*PRICE HISTORY*⌛\n\n *YESTERDAY*\n🟢*MIN*: *{dailymin}* *BUSD* \n🔴*MAX*: *{dailymax}* *BUSD* \n🟡*AVG*: *{dailyavg}* *BUSD* \n🔵*MED*: *{dailymed}* *BUSD* \n\n *LAST WEEK*\n🟢*MIN*: *{weeklymin}* *BUSD*\n🔴*MAX*: *{weeklymax}* *BUSD*\n🟡*AVG*: *{weeklyavg}* *BUSD* \n🔵*MED*: *{weeklymed}* *BUSD*"
-
 STARTTEXT = "*👋Welcome MOMO Catcher👋*\nThis bot can useful for catching *CHEAP MOMO's* in MOMO market before *EVERYONE*🔥\n\nYou can find bot *command usages* in */help*"
 SPACETEXT = "\n\n"
 
@@ -95,8 +96,11 @@ CLEARPROCESSTEXT = "⚠️CLEARING ALL */SET* PROCESS..."
 REGISTERNEGATIVETEXT = "⚠️PLEASE PROVIDE A VALID */REGISTER* USAGE: \n FOR EXAMPLES PLEASE USE */help*"
 REGISTERSECONDNEGATIVETEXT = "YOU ARE *ALREADY* REGISTERED !"
 
-HELPTEXT = "For */set* required MOMO price range usage: */set* \n\n📗*OPERATOR EXAMPLES*📕\n\n*RARITY* : *COMMON | UNCOMMON | UNIQUE | RARE | EPIC | LEGENDARY*\n\n*OPERATOR* : * > <*\n\n*AMOUNT BUSD* : *100.2*\n\n *Example Set Usage* : */set |RARITY| |OPERATOR| |AMOUNTBUSD|*"
+HELPTEXT = "*ALL COMMANDS*\n*/start* Welcome Command\n*/help* Help Command\n*/set* Create Rule Command\n*/startbot* Start Rules Command\n*/stopbot* Stop Rules Command\n*/clearbot* Clear All Rules Command\n*/register* Register Command"
+HELPTEXT1 = "📗*SET OPERATORS*📕\n\n*RARITY* : *COMMON | UNCOMMON | UNIQUE | RARE | EPIC | LEGENDARY*\n\n*OPERATOR* : * > <*\n\n*AMOUNT BUSD* : *100.2*\n\n*Example Set Usage* : */set |RARITY| |OPERATOR| |AMOUNTBUSD|* \n\n"
+HELPTEXT2 = "📗*REGISTER OPERATORS*📕\n\n*USERNAME* : *YOUR USERNAME* \n*Example Register Usage*:/register *YOUR_USERNAME*"
 SETNEGATIVETEXT = "⚠️PLEASE *REGISTER* FIRST !\nFOR EXAMPLES PLEASE USE */help*"
+SETPOSITIVETEXT = "⏳ I WILL SEND YOU A MESSAGE WHEN\nANY *{rarity}* price  *{operator}* *BUSD{price}*\n"
 SETSECONDNEGATIVETEXT = "⚠️YOUR MEMBERSHIP IS *EXPIRED* OR *NOT ACTIVATED*!\n PLEASE CONTACT ANY ADMIN VIA OUR GROUP : *https://t.me/MOMOCATCHER*"
 SETTHIRDNEGATIVETEXT = "⚠️PLEASE PROVIDE A VALID */SET* USAGE: \n FOR EXAMPLES PLEASE USE */help*"
 SETFOURTHNEGATIVETEXT = "⚠️YOU ALREADY SETTED THIS *SET* !*/SET* USAGE: \n FOR EXAMPLES PLEASE USE */help*"
@@ -222,12 +226,16 @@ def startCommand(update, context):
 
 def helpCommand(update, context):
     context.bot.send_message(chat_id=update.effective_chat.id, text=HELPTEXT,parse_mode = PARSEMODE_MARKDOWN)
+    context.bot.send_message(chat_id=update.effective_chat.id, text=HELPTEXT1,parse_mode = PARSEMODE_MARKDOWN)
+    context.bot.send_message(chat_id=update.effective_chat.id, text=HELPTEXT2,parse_mode = PARSEMODE_MARKDOWN)
 
 def stopBotCommand(update,context):
     from DBMANAGER import StopUserSets
     response = STOPPROCESSTEXT
     context.bot.send_message(chat_id=update.effective_chat.id, text=response,parse_mode = PARSEMODE_MARKDOWN)
     StopUserSets(update.effective_chat.id)
+
+
 
 def startBotCommand(update,context):
     from DBMANAGER import StartUserSets
@@ -350,41 +358,67 @@ def setCallback():
 
 
 
-def GetTransactionHistory(momoID,dateRange):   
-    tempPage = 1
-    tempTransactionHistory = {"max":"UNKOWN","avg":"UNKOWN","med":"UNKOWN","min":"UNKOWN"}
-    tempMomosTransactionHistory = []    
-    downloadStart = datetime.now()
 
+def DownloadDailyTransactionHistory():
+    global dailyTransactionList
+
+    print("Downloading Daily Transaction History...")
+    tempMomosTransactionHistory = [] 
+    tempPage = 1
     while (True):
         requestURL = transactionAPI.format(page = tempPage,limit = 5000)
         response = requests.get(requestURL,headers=headers)
         json_data = json.loads(response.content)
-        tempMomosTransactionHistory.extend(json_data["list"])  
-        if(datetime.fromtimestamp(json_data["list"][-1]["crtime"]) <  datetime(datetime.today().year,datetime.today().month,datetime.today().day - dateRange)):          
+        tempMomosTransactionHistory.extend(json_data["list"])
+        tempDate = datetime.today()  
+        if(datetime.fromtimestamp(json_data["list"][-1]["crtime"]) <  datetime(tempDate.year,tempDate.month,tempDate.day - 1)):          
             break                       
         tempPage += 1
-    downloadEnd = datetime.now()
-    
+    dailyTransactionList = tempMomosTransactionHistory
+    threading.Timer(transactionCTR,DownloadDailyTransactionHistory).start()
+
+
+
+def DownloadWeeklyTransactionHistory():
+    global weeklyTransactionList
+
+    print("Downloading Daily Transaction History...")
+    tempMomosTransactionHistory = [] 
+    tempPage = 1
+    while (True):
+        requestURL = transactionAPI.format(page = tempPage,limit = 5000)
+        response = requests.get(requestURL,headers=headers)
+        json_data = json.loads(response.content)
+        tempMomosTransactionHistory.extend(json_data["list"])
+        tempDate = datetime.today()  
+        if(datetime.fromtimestamp(json_data["list"][-1]["crtime"]) <  datetime(tempDate.year,tempDate.month,tempDate.day - 7)):          
+            break                       
+        tempPage += 1
+    weeklyTransactionList = tempMomosTransactionHistory
+    threading.Timer(transactionCTR,DownloadWeeklyTransactionHistory).start()
+
+
+def GetTransactionHistory(momoID,dateRange):   
+    tempTransactionHistory = {"max":"UNKOWN","avg":"UNKOWN","med":"UNKOWN","min":"UNKOWN"}
     sortStart = datetime.now()
-    tempMomoTransactionPriceList = list(map(GetMomoPrice, list(filter(lambda x: GetMomoID(x) == momoID, tempMomosTransactionHistory))))
-    print("len",len(tempMomoTransactionPriceList))
-    if(len(tempMomoTransactionPriceList) > 0):          
-        tempTransactionHistory["max"] = round(max(tempMomoTransactionPriceList),2)
-        tempTransactionHistory["min"] = round(min(tempMomoTransactionPriceList),2)
-        tempTransactionHistory["med"] = round(GetListMed(tempMomoTransactionPriceList),2)
-        tempTransactionHistory["avg"] = round(sum(tempMomoTransactionPriceList) / len(tempMomoTransactionPriceList),2)
-    sortEnd = datetime.now()
-    
+    tempJSONDataList = dailyTransactionList if dateRange==1 else weeklyTransactionList
+    if(len(tempJSONDataList) > 0):
+        tempMomoTransactionPriceList = list(map(GetMomoPrice, list(filter(lambda x: GetMomoID(x) == momoID,tempJSONDataList))))   
+        if(len(tempMomoTransactionPriceList) > 0):          
+            tempTransactionHistory["max"] = round(max(tempMomoTransactionPriceList),2)
+            tempTransactionHistory["min"] = round(min(tempMomoTransactionPriceList),2)
+            tempTransactionHistory["med"] = round(GetListMed(tempMomoTransactionPriceList),2)
+            tempTransactionHistory["avg"] = round(sum(tempMomoTransactionPriceList) / len(tempMomoTransactionPriceList),2)
+    sortEnd = datetime.now()  
     print("sorttime",sortEnd - sortStart)
-    print("downloadtime",downloadEnd - downloadStart)
     return  tempTransactionHistory
 
 
 def GetListMed(list):
     return statistics.median(list)
 
-
+def unknownBotCommand(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text=UNKOWNTEXT,parse_mode = PARSEMODE_MARKDOWN)
 
 def clearBotCommand(update,context):
     from DBMANAGER import ClearUserSets
@@ -403,13 +437,27 @@ def BotPCSession():
     dispatcher.add_handler(CommandHandler('stopbot',stopBotCommand))
     dispatcher.add_handler(CommandHandler('startbot',startBotCommand))
     dispatcher.add_handler(CommandHandler('clearbot',clearBotCommand))
+    dispatcher.add_handler(MessageHandler(Filters.text, unknownBotCommand))
 
 
     updater.start_polling()  
-    sleep(momoMarketCSTR)
 
 
-    threading.Timer(momoMarketCTR,setCallback).start()
+    t1 = threading.Timer(0,DownloadDailyTransactionHistory)
+    t2 = threading.Timer(0,DownloadWeeklyTransactionHistory)
+    t3 = threading.Timer(momoMarketCSTR,setCallback)
+
+    t1.daemon = True
+    t2.daemon = True
+    t3.daemon = True
+
+
+    t1.start()
+    t2.start()
+    t3.start()
+
+
+
     updater.idle() 
 
 def BotHerokuSession():
@@ -425,6 +473,7 @@ def BotHerokuSession():
     dispatcher.add_handler(CommandHandler('stopbot',stopBotCommand))
     dispatcher.add_handler(CommandHandler('startbot',startBotCommand))
     dispatcher.add_handler(CommandHandler('clearbot',clearBotCommand))
+    dispatcher.add_handler(MessageHandler(Filters.text, unknownBotCommand))
     
     PORT = int(os.environ.get('PORT', '8443'))
     updater.start_webhook(listen="0.0.0.0",
@@ -432,8 +481,20 @@ def BotHerokuSession():
                         url_path=botID,
                         webhook_url="https://moboxbot.herokuapp.com/" + botID)
     
-    sleep(momoMarketCSTR)
-    threading.Timer(momoMarketCTR,setCallback).start()
+   
+
+    t1 = threading.Timer(0,DownloadDailyTransactionHistory)
+    t2 = threading.Timer(0,DownloadWeeklyTransactionHistory)
+    t3 = threading.Timer(momoMarketCSTR,setCallback)
+    t1.daemon = True
+    t2.daemon = True
+    t3.daemon = True
+
+
+    t1.start()
+    t2.start()
+    t3.start()
+
     updater.idle()     
 
 def DictCompare(d1, d2):
@@ -456,4 +517,3 @@ if __name__ == '__main__':
     #DBMANAGER.DownloadDatabaseImages()  
     #BotPCSession()
     BotHerokuSession() 
-    #GetTransactionHistory(22001,1)
